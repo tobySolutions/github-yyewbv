@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useRef, Fragment } from 'react';
 import { createRoot } from 'react-dom/client';
-import { block } from 'million/react';
+import { block, For } from 'million/react';
 
 import './index.css';
 
@@ -14,13 +14,7 @@ function App() {
         every element's dimensions are hard-coded to the same value and never
         change.
       </p>
-      <br />
-      <h3>Grid</h3>
       <GridVirtualizerFixed />
-      <br />
-      <h3>Grid With Million</h3>
-      <GridVirtualizerFixedBlock />
-      <br />
       {process.env.NODE_ENV === 'development' ? (
         <p>
           <strong>Notice:</strong> You are currently running React in
@@ -33,7 +27,7 @@ function App() {
 }
 
 function GridVirtualizerFixed() {
-  const parentRef = React.useRef();
+  const parentRef = useRef();
 
   const rowVirtualizer = useVirtualizer({
     count: 10000,
@@ -50,6 +44,27 @@ function GridVirtualizerFixed() {
     overscan: 5,
   });
 
+  return (
+    <div>
+      <br />
+      <h3>Grid With React DOM</h3>
+      <GridDisplay
+        parentRef={parentRef}
+        rowVirtualizer={rowVirtualizer}
+        columnVirtualizer={columnVirtualizer}
+      />
+      <br />
+      <h3>Grid With Million DOM</h3>
+      <MillionGridDisplay
+        parentRef={parentRef}
+        rowVirtualizer={rowVirtualizer}
+        columnVirtualizer={columnVirtualizer}
+      />
+    </div>
+  );
+}
+
+function GridDisplay({ parentRef, rowVirtualizer, columnVirtualizer }) {
   return (
     <>
       <div
@@ -69,7 +84,7 @@ function GridVirtualizerFixed() {
           }}
         >
           {rowVirtualizer.getVirtualItems().map((virtualRow) => (
-            <React.Fragment key={virtualRow.index}>
+            <Fragment key={virtualRow.index}>
               {columnVirtualizer.getVirtualItems().map((virtualColumn) => (
                 <div
                   key={virtualColumn.index}
@@ -94,7 +109,7 @@ function GridVirtualizerFixed() {
                   Cell {virtualRow.index}, {virtualColumn.index}
                 </div>
               ))}
-            </React.Fragment>
+            </Fragment>
           ))}
         </div>
       </div>
@@ -102,7 +117,71 @@ function GridVirtualizerFixed() {
   );
 }
 
-const GridVirtualizerFixedBlock = block(GridVirtualizerFixed);
+function MillionGridDisplay({ parentRef, rowVirtualizer, columnVirtualizer }) {
+  return (
+    <div
+      ref={parentRef}
+      className="List"
+      style={{
+        height: `500px`,
+        width: `500px`,
+        overflow: 'auto',
+      }}
+    >
+      <div
+        style={{
+          height: `${rowVirtualizer.getTotalSize()}px`,
+          width: `${columnVirtualizer.getTotalSize()}px`,
+          position: 'relative',
+        }}
+      >
+        <For each={rowVirtualizer.getVirtualItems()}>
+          {(virtualRow) => (
+            <Fragment key={virtualRow.index}>
+              <For each={columnVirtualizer.getVirtualItems()}>
+                {(virtualColumn) => (
+                  <CellBlock
+                    virtualColumn={virtualColumn}
+                    virtualRow={virtualRow}
+                  />
+                )}
+              </For>
+            </Fragment>
+          )}
+        </For>
+      </div>
+    </div>
+  );
+}
+
+const CellBlock = block(Cell);
+
+function Cell({ virtualColumn, virtualRow }) {
+  return (
+    <div
+      key={virtualColumn.index}
+      className={
+        virtualColumn.index % 2
+          ? virtualRow.index % 2 === 0
+            ? 'ListItemOdd'
+            : 'ListItemEven'
+          : virtualRow.index % 2
+          ? 'ListItemOdd'
+          : 'ListItemEven'
+      }
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: `${virtualColumn.size}px`,
+        height: `${virtualRow.size}px`,
+        transform: `translateX(${virtualColumn.start}px) translateY(${virtualRow.start}px)`,
+      }}
+    >
+      Cell {virtualRow.index}, {virtualColumn.index}
+    </div>
+  );
+}
 
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
